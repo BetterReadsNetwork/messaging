@@ -1,0 +1,22 @@
+
+<html>
+
+<ul>
+<% msgs.forEach((msg) => { %>
+
+<li><%= msg.from_uuid %>: <%= msg.message %></li>
+
+<% }); %>
+</ul>
+
+<form action="/api/send_message/<%= user %>/<%= other %>" method="post">
+Message: <input name="msg">
+<p>
+<input type="submit" value="Send message.">
+
+</form>
+
+<a href="/chats/<%= user %>">Back to My Chats</a>
+
+
+</html>
