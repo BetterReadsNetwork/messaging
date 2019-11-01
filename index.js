@@ -8,10 +8,9 @@ app.use(bodyParser.urlencoded({
     extended: true
 }));
 
-var Message = require('./Message.js');
-var Chat = require('./Chat.js');
-var Block = require('./Block.js');
-
+var Message = require('./schema/Message.js');
+var Chat = require('./schema/Chat.js');
+var Block = require('./schema/Block.js');
 
 const url = require('url');
 
@@ -20,6 +19,10 @@ const url = require('url');
 app.use('/api/block_user/:id', (req, res) => {
     var user = req.params.id;
     var other = req.body.other;
+    if (user === other) {
+      res.redirect("/chats/" + user);
+      return;
+    }
     var q = {
         user: user,
         other: other
@@ -52,6 +55,10 @@ app.use('/api/block_user/:id', (req, res) => {
 app.use('/api/unblock_user/:id/:other', (req, res) => {
     var user = req.params.id;
     var other = req.params.other;
+    if (user === other) {
+      res.redirect("/chats/" + user);
+      return;
+    }
     var q = {
         user: user,
         other: other
@@ -63,11 +70,11 @@ app.use('/api/unblock_user/:id/:other', (req, res) => {
             console.log('Messaging error' + err);
             res.write(err);
         } else if (chats.length > 0) {
-          Block.remove(q, (err, blocked) => {
-						if (err) {
-							console.log("unblocking error");
-						}
-					});
+            Block.remove(q, (err, blocked) => {
+                if (err) {
+                    console.log("unblocking error");
+                }
+            });
         }
         res.redirect("/messages/" + user);
     })
@@ -78,34 +85,48 @@ app.use('/api/unblock_user/:id/:other', (req, res) => {
 app.use('/api/add_chat/:id', (req, res) => {
     var user = req.params.id;
     var other = req.body.other;
+    if (user === other) {
+      res.redirect("/chats/" + user);
+      return;
+    }
     var q = {
         user: user,
         other: other
     }
 
-    Chat.find(q, (err, chats) => {
+    Block.find(q, (err, blocks) => {
         if (err) {
             res.type('html').status(200);
             console.log('Messaging error' + err);
             res.write(err);
-        } else if (chats.length > 0) {
-            var dest = "/messages/" + user + '/' + other
-            res.redirect(dest);
+        } else if (blocks.length > 0) {
+            res.redirect("/chats/" + user);
         } else {
-            new_chat = new Chat(q);
-            new_chat.save((err) => {
+            Chat.find(q, (err, chats) => {
                 if (err) {
                     res.type('html').status(200);
-                    res.write('Messaging error: ' + err);
-                    console.log(err);
-                    res.end();
-                } else {
+                    console.log('Messaging error' + err);
+                    res.write(err);
+                } else if (chats.length > 0) {
                     var dest = "/messages/" + user + '/' + other
                     res.redirect(dest);
+                } else {
+                    new_chat = new Chat(q);
+                    new_chat.save((err) => {
+                        if (err) {
+                            res.type('html').status(200);
+                            res.write('Messaging error: ' + err);
+                            console.log(err);
+                            res.end();
+                        } else {
+                            var dest = "/messages/" + user + '/' + other
+                            res.redirect(dest);
+                        }
+                    });
                 }
-            });
+            })
         }
-    })
+    });
 });
 
 /***************************************/
@@ -113,7 +134,10 @@ app.use('/api/add_chat/:id', (req, res) => {
 app.use('/api/send_message/:user/:other', (req, res) => {
     var user = req.params.user;
     var other = req.params.other;
-
+    if (user === other) {
+      res.redirect("/chats/" + user);
+      return;
+    }
     var new_message = new Message({
         to_uuid: other,
         from_uuid: user,
@@ -138,6 +162,10 @@ app.use('/api/get_messages/:user/:other', (req, res) => {
 
     var user = req.params.user;
     var other = req.params.other;
+    if (user === other) {
+      res.redirect("/chats/" + user);
+      return;
+    }
 
     var query = {
         "$or": [{
@@ -223,57 +251,79 @@ app.use('/messages/:user/:other', (req, res) => {
 });
 
 app.use('/chats/:id', (req, res) => {
-    var uuid = req.params.id;
-    var query = {
-        "$or": [{
-            user: uuid
-        }, {
-            other: uuid
-        }]
-    }
-    Chat.find(query, (err, chats) => {
-        if (err) {
-            res.type('html').status(200);
-            console.log('Messaging error' + err);
-            res.write(err);
-            return;
-        }
+  var uuid = req.params.id;
+  var query = {
+      "$or": [{
+          user: uuid
+      }, {
+          other: uuid
+      }]
+  }
+  Chat.find(query, (err, chats) => {
+      if (err) {
+          res.type('html').status(200);
+          console.log('Messaging error' + err);
+          res.write(err);
+          return;
+      }
 
-        if (chats.length == 0) {
-            chats = [];
-        }
-        var chat_ids = []
-        chats.forEach((chat) => {
-            if (chat.user == uuid) {
-                chat_ids.push({
-                    other: chat.other
-                });
-            } else {
-                chat_ids.push({
-                    other: chat.user
-                });
-            }
-        });
-        var block_q = {
-            user: uuid
-        };
-        Block.find(block_q, (err, blocks) => {
-            if (err) {
-                res.type('html').status(200);
-                console.log('Messaging error' + err);
-                res.write(err);
-                return;
-            }
-            if (blocks.length == 0) {
-                blocks = [];
-            }
-            res.render('chats', {
-                chats: chat_ids,
-                uuid: uuid,
-                blocked: blocks
-            });
-        });
-    });
+      if (chats.length == 0) {
+          chats = [];
+      }
+
+      var chat_ids = [];
+      chats.forEach((chat) => {
+          if (chat.user == uuid) {
+              var block_q = {
+                  user: uuid,
+                  other: chat.other
+              };
+
+              Block.find(block_q, (err, blocks) => {
+                  if (err) {
+                      res.type('html').status(200);
+                      console.log('Messaging error' + err);
+                      res.write(err);
+                      return;
+                  } else if (blocks.length == 0) {
+                      chat_ids.push({other:chat.other});
+                  }
+              });
+
+          } else {
+              var block_q = {
+                  user: chat.other,
+                  other: uuid
+              };
+
+              Block.find(block_q, (err, blocks) => {
+                  if (err) {
+                      res.type('html').status(200);
+                      console.log('Messaging error' + err);
+                      res.write(err);
+                      return;
+                  } else if (blocks.length == 0) {
+                      chat_ids.push({other:chat.user});
+                  }
+              });
+          }
+      });
+      Block.find({user:uuid}, (err, blocks) => {
+          if (err) {
+              res.type('html').status(200);
+              console.log('Messaging error' + err);
+              res.write(err);
+              return;
+          } else if (blocks.length == 0) {
+              blocks = [];
+          }
+          res.render('chats', {
+              chats: chat_ids,
+              uuid: uuid,
+              blocked: blocks
+          });
+      });
+  });
 });
 
 /*************************************************/
