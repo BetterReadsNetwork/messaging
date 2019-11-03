@@ -1,19 +1,18 @@
-var mongoose = require('mongoose');
+var mongoose = require("mongoose");
 
-mongoose.connect('mongodb://localhost:27017/db');
+mongoose.connect("mongodb://localhost:27017/db");
 
 var Schema = mongoose.Schema;
 
-var chat_schema = new Schema(
-	{
-		user: {
-			type: Number,
-			required: true
-		},
-		other: {
-			type: Number,
-			required: true
-		}
+var chat_schema = new Schema({
+  user: {
+    type: Number,
+    required: true
+  },
+  other: {
+    type: Number,
+    required: true
+  }
 });
 
-module.exports = mongoose.model('Chat', chat_schema);
+module.exports = mongoose.model("Chat", chat_schema);

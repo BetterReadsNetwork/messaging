@@ -1,44 +1,38 @@
-
 <html>
+  <ul>
+    Your Chats: <% chats.forEach((chat) => { %>
 
-<ul>
-Your Chats:
-<% chats.forEach((chat) => { %>
+    <li>
+      <a href="/messages/<%= uuid %>/<%= chat.other %>"><%= chat.other %></a>
+    </li>
 
-<li>
-  <a href="/messages/<%= uuid %>/<%= chat.other %>"><%= chat.other %></a>
+    <% }); %>
+  </ul>
 
-</li>
+  <form action="/api/add_chat/<%= uuid %>" method="post">
+    Start Chat With: <input name="other" />
+    <p>
+      <input type="submit" value="Go to chat." />
+    </p>
+  </form>
 
-<% }); %>
-</ul>
+  <ul>
+    Your Blocked Users: <% blocked.forEach((blockee) => { %>
 
-<form action="/api/add_chat/<%= uuid %>" method="post">
+    <li>
+      <%= blockee.other %>:
+      <a href="/api/unblock_user/<%= uuid %>/<%= blockee.other %>"
+        >Unblock user</a
+      >
+    </li>
 
-Start Chat With: <input name="other">
-<p>
-<input type="submit" value="Go to chat.">
+    <% }); %>
+  </ul>
 
-</form>
-
-<ul>
-Your Blocked Users:
-<% blocked.forEach((blockee) => { %>
-
-<li>
-  <%= blockee.other %>: <a href="/api/unblock_user/<%= uuid %>/<%= blockee.other %>">Unblock user</a>
-</li>
-
-<% }); %>
-</ul>
-
-<form action="/api/block_user/<%= uuid %>" method="post">
-
-Block user: <input name="other">
-<p>
-<input type="submit" value="Block user.">
-
-</form>
-
-
+  <form action="/api/block_user/<%= uuid %>" method="post">
+    Block user: <input name="other" />
+    <p>
+      <input type="submit" value="Block user." />
+    </p>
+  </form>
 </html>
